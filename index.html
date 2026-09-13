@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz de Algoritmos</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:Arial,Helvetica,sans-serif;
+  min-height:100vh;
+  background:linear-gradient(135deg,#172554,#312e81,#581c87);
+  color:#172033;
+  display:flex;align-items:center;justify-content:center;padding:24px
+}
+.container{width:100%;max-width:850px}
+.card{
+  background:#fff;border-radius:24px;padding:32px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25)
+}
+header{text-align:center;margin-bottom:24px}
+header h1{font-size:clamp(28px,5vw,42px);color:#312e81;margin-bottom:8px}
+header p{color:#64748b;font-size:16px}
+.top{display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;font-weight:bold;color:#475569}
+.progress{height:10px;background:#e2e8f0;border-radius:20px;overflow:hidden;margin-bottom:28px}
+.progress-bar{height:100%;width:0;background:linear-gradient(90deg,#4f46e5,#9333ea);transition:.35s}
+.question{font-size:22px;line-height:1.45;margin-bottom:22px}
+.code{
+  background:#0f172a;color:#e2e8f0;padding:18px;border-radius:12px;
+  font-family:Consolas,monospace;white-space:pre-wrap;overflow:auto;
+  margin:0 0 20px;font-size:15px;line-height:1.55
+}
+.options{display:grid;gap:12px}
+.option{
+  width:100%;text-align:left;border:2px solid #e2e8f0;background:#f8fafc;
+  border-radius:14px;padding:16px;cursor:pointer;font-size:16px;
+  transition:.2s;display:flex;gap:12px;align-items:flex-start
+}
+.option:hover:not(:disabled){border-color:#6366f1;background:#eef2ff;transform:translateY(-1px)}
+.option .letter{
+  min-width:30px;height:30px;border-radius:50%;background:#e0e7ff;color:#3730a3;
+  display:grid;place-items:center;font-weight:bold
+}
+.option.correct{border-color:#16a34a;background:#f0fdf4}
+.option.correct .letter{background:#16a34a;color:white}
+.option.wrong{border-color:#dc2626;background:#fef2f2}
+.option.wrong .letter{background:#dc2626;color:white}
+.option:disabled{cursor:default}
+.feedback{display:none;margin-top:20px;border-radius:16px;padding:18px;line-height:1.55}
+.feedback.show{display:block}
+.feedback.ok{background:#f0fdf4;border:1px solid #86efac}
+.feedback.no{background:#fef2f2;border:1px solid #fca5a5}
+.feedback strong{display:block;font-size:18px;margin-bottom:6px}
+.next{
+  display:none;width:100%;margin-top:18px;padding:15px;border:0;border-radius:13px;
+  background:#4f46e5;color:#fff;font-size:17px;font-weight:bold;cursor:pointer
+}
+.next.show{display:block}
+.next:hover{background:#4338ca}
+.result{text-align:center;display:none}
+.result.show{display:block}
+.score{font-size:64px;font-weight:800;color:#4f46e5;margin:20px 0 8px}
+.result h2{font-size:28px;margin-bottom:10px}
+.result p{color:#64748b;line-height:1.6;margin-bottom:22px}
+.restart{
+  padding:14px 28px;border:0;border-radius:12px;background:#4f46e5;color:white;
+  font-size:16px;font-weight:bold;cursor:pointer
+}
+footer{text-align:center;color:#94a3b8;font-size:13px;margin-top:18px}
+@media(max-width:600px){
+  body{padding:12px}
+  .card{padding:22px 16px;border-radius:18px}
+  .question{font-size:19px}
+  .option{padding:14px;font-size:15px}
+  .code{font-size:13px;padding:14px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="card">
+<header>
+<h1>Quiz de Algoritmos</h1>
+<p>Teste seus conhecimentos de lógica e programação</p>
+</header>
+
+<div id="quiz">
+  <div class="top">
+    <span id="counter">Questão 1 de 30</span>
+    <span id="points">0 ponto(s)</span>
+  </div>
+  <div class="progress"><div class="progress-bar" id="progress"></div></div>
+
+  <div id="questionArea"></div>
+  <div class="options" id="options"></div>
+  <div class="feedback" id="feedback"></div>
+  <button class="next" id="next">Próxima questão →</button>
+</div>
+
+<div class="result" id="result">
+  <h2>Quiz concluído!</h2>
+  <div class="score" id="finalScore">0/30</div>
+  <div id="percentage" style="font-size:20px;font-weight:bold;color:#475569;margin-bottom:14px;">0%</div>
+  <p id="message"></p>
+  <button class="restart" onclick="restart()">Refazer quiz</button>
+</div>
+</div>
+<footer>Quiz de Algoritmos • Desenvolvido para estudo</footer>
+</div>
+
+<script>
+const questions = [
+{
+  q:"Qual é a principal finalidade de um algoritmo?",
+  options:[
+   ["Organizar uma sequência de passos para resolver um problema.","Um algoritmo descreve passos ordenados para alcançar uma solução."],
+   ["Aumentar automaticamente a velocidade do computador.","Algoritmos não aumentam a velocidade física do computador."],
+   ["Substituir o sistema operacional.","Um algoritmo é uma sequência de instruções, não um sistema operacional."],
+   ["Armazenar arquivos permanentemente.","Armazenamento é função de sistemas e dispositivos próprios."]
+  ], correct:0
+ },
+{
+  q:"Qual característica é essencial em um bom algoritmo?",
+  options:[
+   ["Ter passos claros e ordenados.","Passos claros e ordenados facilitam a execução e a compreensão do algoritmo."],
+   ["Ser sempre escrito em linguagem C.","Um algoritmo pode ser descrito em linguagem natural, fluxograma, Portugol ou outras formas."],
+   ["Ter obrigatoriamente mais de 100 linhas.","O tamanho depende do problema."],
+   ["Usar somente números.","Algoritmos podem trabalhar com textos, números, valores lógicos e outros dados."]
+  ], correct:0
+ },
+{
+  q:"No Portugol, qual comando é usado para mostrar uma informação na tela?",
+  options:[
+   ["leia()","leia() é usado para receber dados digitados pelo usuário."],
+   ["escreva()","escreva() exibe informações na tela."],
+   ["se()","se é usado para tomar decisões."],
+   ["inteiro","inteiro é um tipo de dado."]
+  ], correct:1
+ },
+{
+  q:"No Portugol, qual comando é usado para receber um valor digitado pelo usuário?",
+  options:[
+   ["escreva()","escreva() serve para saída de dados."],
+   ["leia()","leia() recebe dados digitados pelo usuário."],
+   ["inicio()","inicio() identifica a função principal."],
+   ["mostre()","mostre() não é o comando usado para entrada nessa sintaxe."]
+  ], correct:1
+ },
+{
+  q:"Qual tipo de dado é adequado para armazenar a idade de uma pessoa em anos completos?",
+  options:[
+   ["real","real é adequado quando podem existir valores decimais."],
+   ["cadeia","cadeia é usado para textos."],
+   ["inteiro","inteiro é adequado para números sem parte decimal."],
+   ["logico","logico representa verdadeiro ou falso."]
+  ], correct:2
+ },
+{
+  q:"Qual tipo de dado é mais adequado para armazenar o nome de uma pessoa?",
+  options:[
+   ["inteiro","inteiro armazena números inteiros."],
+   ["real","real é usado para números que podem ter casas decimais."],
+   ["cadeia","cadeia é usado para armazenar textos."],
+   ["logico","logico armazena verdadeiro ou falso."]
+  ], correct:2
+ },
+{
+  q:"Qual tipo de dado representa valores como verdadeiro e falso?",
+  options:[
+   ["cadeia","cadeia é usado para textos."],
+   ["real","real é usado para números com possibilidade de casas decimais."],
+   ["logico","logico representa valores booleanos, como verdadeiro e falso."],
+   ["inteiro","inteiro representa números sem parte decimal."]
+  ], correct:2
+ },
+{
+  q:"Qual declaração cria uma variável inteira chamada idade?",
+  options:[
+   ["cadeia idade","cadeia cria uma variável de texto."],
+   ["inteiro idade","inteiro declara uma variável para números inteiros."],
+   ["real = idade","Essa não é uma declaração válida de variável."],
+   ["logico idade","logico seria usado para verdadeiro ou falso."]
+  ], correct:1
+ },
+{
+  q:"Observe o código. Qual valor será mostrado?",
+  code:"inteiro a = 8\ninteiro b = 3\nescreva(a + b)",
+  options:[
+   ["11","A soma de 8 com 3 resulta em 11."],
+   ["24","24 seria o resultado da multiplicação, não da soma."],
+   ["5","5 seria a diferença entre os valores."],
+   ["83","Os valores são números inteiros e a expressão realiza uma soma."]
+  ], correct:0
+ },
+{
+  q:"Observe o código. Qual valor será mostrado?",
+  code:"inteiro a = 10\ninteiro b = 4\nescreva(a - b)",
+  options:[
+   ["14","14 seria a soma de 10 e 4."],
+   ["6","10 menos 4 resulta em 6."],
+   ["40","40 seria o resultado da multiplicação."],
+   ["2,5","2,5 seria o resultado de 10 dividido por 4."]
+  ], correct:1
+ },
+{
+  q:"Observe o código. Qual valor será mostrado?",
+  code:"inteiro a = 6\ninteiro b = 5\nescreva(a * b)",
+  options:[
+   ["11","11 seria o resultado da soma."],
+   ["1","1 seria a diferença entre os valores."],
+   ["30","6 multiplicado por 5 resulta em 30."],
+   ["65","Os números não são concatenados nessa expressão."]
+  ], correct:2
+ },
+{
+  q:"Observe o código. Qual valor será mostrado?",
+  code:"real a = 10\nreal b = 4\nescreva(a / b)",
+  options:[
+   ["2,5","10 dividido por 4 resulta em 2,5."],
+   ["14","14 seria o resultado da soma."],
+   ["6","6 seria o resultado da subtração."],
+   ["40","40 seria o resultado da multiplicação."]
+  ], correct:0
+ },
+{
+  q:"Qual operador é usado para atribuir um valor a uma variável?",
+  options:[
+   ["=","O sinal = é usado para atribuição."],
+   ["==","== é usado para comparar igualdade."],
+   ["!=","!= é usado para verificar diferença."],
+   [">"," > representa maior que."]
+  ], correct:0
+ },
+{
+  q:"Qual operador é usado para comparar se dois valores são iguais?",
+  options:[
+   ["=","= é usado para atribuição."],
+   ["!=","!= representa diferença."],
+   ["==","== representa uma comparação de igualdade."],
+   ["<","< representa menor que."]
+  ], correct:2
+ },
+{
+  q:"Qual operador representa 'diferente de'?",
+  options:[
+   ["=","= representa atribuição."],
+   ["==","== representa igualdade."],
+   ["!=","!= representa uma comparação de diferença."],
+   [">="," >= representa maior ou igual."]
+  ], correct:2
+ },
+{
+  q:"Qual operador representa 'maior que'?",
+  options:[
+   ["<","< significa menor que."],
+   [">","> significa maior que."],
+   ["==","== significa igual."],
+   ["<=","<= significa menor ou igual."]
+  ], correct:1
+ },
+{
+  q:"Qual operador representa 'menor ou igual a'?",
+  options:[
+   [">="," >= significa maior ou igual."],
+   ["<=","<= significa menor ou igual."],
+   ["!=","!= significa diferente."],
+   ["==","== significa igual."]
+  ], correct:1
+ },
+{
+  q:"Observe a condição: (idade >= 18) e (idade <= 60). Para qual situação ela será verdadeira?",
+  options:[
+   ["Quando a idade for menor que 18.","A primeira condição seria falsa."],
+   ["Quando a idade estiver entre 18 e 60, incluindo os limites.","As duas comparações precisam ser verdadeiras ao mesmo tempo."],
+   ["Quando a idade for maior que 60.","A segunda condição seria falsa."],
+   ["Para qualquer idade.","A expressão estabelece dois limites."]
+  ], correct:1
+ },
+{
+  q:"O operador lógico 'e' (AND) exige que:",
+  options:[
+   ["Pelo menos uma condição seja verdadeira.","Isso corresponde ao comportamento de 'ou'."],
+   ["Todas as condições envolvidas sejam verdadeiras.","No AND, todas as condições precisam ser verdadeiras."],
+   ["Todas as condições sejam falsas.","Isso não define o AND."],
+   ["Apenas a primeira condição seja analisada.","As condições precisam ser consideradas em conjunto."]
+  ], correct:1
+ },
+{
+  q:"O operador lógico 'ou' (OR) será verdadeiro quando:",
+  options:[
+   ["Pelo menos uma das condições for verdadeira.","Essa é a principal característica do OR."],
+   ["Todas as condições forem falsas.","Nesse caso, o OR é falso."],
+   ["Nenhuma condição for analisada.","As condições são analisadas."],
+   ["Somente as duas condições forem falsas.","Isso também torna o OR falso."]
+  ], correct:0
+ },
+{
+  q:"O operador lógico 'não' (NOT) tem como função:",
+  options:[
+   ["Somar dois valores.","Soma é uma operação aritmética."],
+   ["Inverter o valor lógico de uma condição.","NOT transforma verdadeiro em falso e falso em verdadeiro."],
+   ["Comparar dois textos sempre.","NOT é uma operação lógica."],
+   ["Multiplicar valores.","Multiplicação é uma operação aritmética."]
+  ], correct:1
+ },
+{
+  q:"Qual estrutura é mais adequada quando o algoritmo precisa tomar uma decisão?",
+  options:[
+   ["se / senao","se testa uma condição e senao trata a alternativa quando ela não é satisfeita."],
+   ["leia()","leia() recebe dados."],
+   ["escreva()","escreva() exibe informações."],
+   ["inteiro","inteiro é um tipo de dado."]
+  ], correct:0
+ },
+{
+  q:"Observe o código. O que será exibido?",
+  code:"inteiro idade = 20\nse (idade >= 18)\n{\n    escreva(\"Maior de idade\")\n}",
+  options:[
+   ["Menor de idade","A condição idade >= 18 é verdadeira."],
+   ["Maior de idade","Como 20 é maior ou igual a 18, a mensagem será exibida."],
+   ["20","O algoritmo não manda exibir diretamente a idade."],
+   ["18","18 aparece apenas na comparação."]
+  ], correct:1
+ },
+{
+  q:"Observe o código. O que será exibido?",
+  code:"inteiro x = 3\nse (x > 5)\n{\n    escreva(\"Maior\")\n}\nsenao\n{\n    escreva(\"Menor ou igual\")\n}",
+  options:[
+   ["Maior","3 não é maior que 5."],
+   ["Menor ou igual","A condição é falsa, então o bloco senao é executado."],
+   ["3","O algoritmo não exibe diretamente x."],
+   ["5","5 aparece apenas na condição."]
+  ], correct:1
+ },
+{
+  q:"Observe o código. Qual será o valor de aprovado?",
+  code:"real media = 8.0\nlogico aprovado = media >= 7.0",
+  options:[
+   ["verdadeiro","8.0 é maior ou igual a 7.0, então a comparação resulta em verdadeiro."],
+   ["falso","A comparação é verdadeira."],
+   ["8.0","A variável aprovado é do tipo logico, não real."],
+   ["7.0","7.0 é apenas o valor usado como limite."]
+  ], correct:0
+ },
+{
+  q:"Qual será o resultado da média no código abaixo?",
+  code:"inteiro nota1 = 8\ninteiro nota2 = 6\nreal media = (nota1 + nota2) / 2.0",
+  options:[
+   ["6","A soma é 14, e não 12."],
+   ["7","14 dividido por 2 resulta em 7."],
+   ["8","8 é apenas a primeira nota."],
+   ["14","14 é a soma antes da divisão."]
+  ], correct:1
+ },
+{
+  q:"Por que usamos 2.0 em vez de 2 no cálculo abaixo?",
+  code:"real media = (nota1 + nota2) / 2.0",
+  options:[
+   ["Para indicar uma divisão envolvendo valor real.","2.0 é um número real e ajuda a manter o resultado como valor real."],
+   ["Porque 2.0 significa dois alunos.","A escrita 2.0 representa um número real."],
+   ["Porque 2 não pode ser usado em matemática.","2 pode ser usado normalmente em operações matemáticas."],
+   ["Para repetir o cálculo duas vezes.","2.0 não controla repetição."]
+  ], correct:0
+ },
+{
+  q:"Observe o código. O que será exibido?",
+  code:"cadeia nome = \"Ana\"\nescreva(\"Olá, \"+ nome)",
+  options:[
+   ["Olá, Ana","O operador + é usado para concatenar textos e valores na saída."],
+   ["Ana, Olá","A ordem das partes está invertida nessa opção."],
+   ["Olá","O conteúdo de nome também é enviado ao escreva()."],
+   ["nome","O programa exibe o valor armazenado na variável, não o nome literal da variável."]
+  ], correct:0
+ },
+{
+  q:"Qual alternativa apresenta uma declaração correta de variável real?",
+  options:[
+   ["real altura = 1.75","real é apropriado para valores com casas decimais."],
+   ["inteiro altura = 1.75","Um inteiro não é apropriado para esse valor decimal."],
+   ["cadeia altura = 1.75","cadeia é destinado a textos."],
+   ["logico altura = 1.75","logico aceita verdadeiro ou falso."]
+  ], correct:0
+ },
+{
+  q:"Qual alternativa apresenta uma declaração correta de variável do tipo lógico?",
+  options:[
+   ["logico aprovado = verdadeiro","A variável logico pode armazenar verdadeiro ou falso."],
+   ["inteiro aprovado = verdadeiro","inteiro não representa valores lógicos."],
+   ["real aprovado = falso","real é usado para números."],
+   ["cadeia aprovado = verdadeiro","cadeia é usado para texto; aqui o objetivo é um valor lógico."]
+  ], correct:0
+ }
+
+];
+
+let current=0, score=0, answered=false;
+
+const area=document.getElementById("questionArea");
+const optionsEl=document.getElementById("options");
+const feedback=document.getElementById("feedback");
+const next=document.getElementById("next");
+const progress=document.getElementById("progress");
+const counter=document.getElementById("counter");
+const points=document.getElementById("points");
+
+function render(){
+  answered=false;
+  const item=questions[current];
+  counter.textContent=`Questão ${current+1} de ${questions.length}`;
+  points.textContent=`${score} ponto(s)`;
+  progress.style.width=`${((current+1)/questions.length)*100}%`;
+  area.innerHTML=`<div class="question">${item.q}</div>`+
+    (item.code ? `<div class="code">${escapeHtml(item.code)}</div>` : "");
+  optionsEl.innerHTML="";
+  feedback.className="feedback";
+  feedback.innerHTML="";
+  next.className="next";
+  item.options.forEach((opt,i)=>{
+    const button=document.createElement("button");
+    button.className="option";
+    button.innerHTML=`<span class="letter">${String.fromCharCode(65+i)}</span><span>${opt[0]}</span>`;
+    button.onclick=()=>answer(i);
+    optionsEl.appendChild(button);
+  });
+}
+
+function answer(selected){
+  if(answered)return;
+  answered=true;
+  const item=questions[current];
+  const buttons=[...document.querySelectorAll(".option")];
+  buttons.forEach(b=>b.disabled=true);
+  buttons[item.correct].classList.add("correct");
+
+  if(selected===item.correct){
+    score++;
+    buttons[selected].classList.add("correct");
+    feedback.className="feedback show ok";
+    feedback.innerHTML=`<strong>🎉 Parabéns! Você acertou!</strong>${item.options[selected][1]}`;
+  }else{
+    buttons[selected].classList.add("wrong");
+    feedback.className="feedback show no";
+    feedback.innerHTML=`<strong>❌ Não foi dessa vez!</strong>${item.options[selected][1]}<br><br><strong>Resposta correta:</strong> ${item.options[item.correct][0]}. ${item.options[item.correct][1]}`;
+  }
+  points.textContent=`${score} ponto(s)`;
+  next.className="next show";
+  next.textContent=current===questions.length-1?"Ver resultado →":"Próxima questão →";
+}
+
+next.onclick=()=>{
+  if(current<questions.length-1){
+    current++;
+    render();
+  }else{
+    showResult();
+  }
+};
+
+function showResult(){
+  document.getElementById("quiz").style.display="none";
+  document.getElementById("result").className="result show";
+  document.getElementById("finalScore").textContent=`${score}/${questions.length}`;
+  const pct=score/questions.length*100;
+  document.getElementById("percentage").textContent=`Aproveitamento: ${pct}%`;
+  let msg="";
+  if(pct===100) {
+    msg="🏆 Excelente! Parabéns! Você teve 100% de aproveitamento e demonstrou um domínio excelente dos conceitos de algoritmos. Continue assim!";
+  } else if(pct>=80) {
+    msg="🎉 Muito bom! Parabéns! Seu aproveitamento foi muito bom. Você demonstrou uma ótima compreensão dos conceitos. Continue praticando para chegar a 100%!";
+  } else if(pct>=70) {
+    msg="👏 Boa! Você teve um bom aproveitamento. Seu conhecimento está avançando, mas fique atento(a): vale a pena rever alguns conceitos e as questões que você errou.";
+  } else {
+    msg="📚 Você precisa rever os conceitos e as aulas. Não desanime! Estude novamente os conteúdos, pratique os exemplos e tente o quiz outra vez. Com prática, você pode melhorar bastante!";
+  }
+  document.getElementById("message").textContent=msg;
+}
+
+function restart(){
+  current=0;score=0;
+  document.getElementById("result").className="result";
+  document.getElementById("quiz").style.display="block";
+  render();
+}
+
+function escapeHtml(text){
+  return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+render();
+</script>
+</body>
+</html>
