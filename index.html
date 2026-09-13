@@ -84,7 +84,15 @@ footer{text-align:center;color:#94a3b8;font-size:13px;margin-top:18px}
 <p>Teste seus conhecimentos de lógica e programação</p>
 </header>
 
-<div id="quiz">
+<div id="startScreen">
+  <div class="question" style="text-align:center;">Antes de começar, digite seu nome:</div>
+  <input id="studentName" type="text" autocomplete="name" placeholder="Digite seu nome" style="width:100%;padding:16px;border:2px solid #e2e8f0;border-radius:14px;font-size:16px;margin-bottom:10px;">
+  <input id="studentClass" type="number" inputmode="numeric" min="1" step="1" placeholder="Digite o número da turma (ex.: 100)" style="width:100%;padding:16px;border:2px solid #e2e8f0;border-radius:14px;font-size:16px;margin-bottom:14px;">
+  <button class="next show" id="startButton" style="display:block;">Começar quiz →</button>
+  <p id="nameError" style="display:none;color:#dc2626;margin-top:12px;text-align:center;">Digite seu nome e sua turma para começar.</p>
+</div>
+
+<div id="quiz" style="display:none;">
   <div class="top">
     <span id="counter">Questão 1 de 30</span>
     <span id="points">0 ponto(s)</span>
@@ -99,6 +107,7 @@ footer{text-align:center;color:#94a3b8;font-size:13px;margin-top:18px}
 
 <div class="result" id="result">
   <h2>Quiz concluído!</h2>
+  <p id="studentResult" style="font-weight:bold;color:#334155;"></p>
   <div class="score" id="finalScore">0/30</div>
   <div id="percentage" style="font-size:20px;font-weight:bold;color:#475569;margin-bottom:14px;">0%</div>
   <p id="message"></p>
@@ -364,7 +373,7 @@ const questions = [
  },
 {
   q:"Observe o código. O que será exibido?",
-  code:"cadeia nome = \"Ana\"\nescreva(\"Olá, \"+ nome)",
+  code:"cadeia nome = \"Ana\"\nescreva(\"Olá, \", nome)",
   options:[
    ["Olá, Ana","O operador + é usado para concatenar textos e valores na saída."],
    ["Ana, Olá","A ordem das partes está invertida nessa opção."],
@@ -403,9 +412,25 @@ const progress=document.getElementById("progress");
 const counter=document.getElementById("counter");
 const points=document.getElementById("points");
 
+function shuffle(array){
+  const copy=[...array];
+  for(let i=copy.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [copy[i],copy[j]]=[copy[j],copy[i]];
+  }
+  return copy;
+}
+
+let displayedOptions=[];
+let displayedCorrect=0;
+let studentName="";
+let studentClass="";
+
 function render(){
   answered=false;
   const item=questions[current];
+  displayedOptions=shuffle(item.options.map((opt,index)=>({opt,index})));
+  displayedCorrect=displayedOptions.findIndex(x=>x.index===item.correct);
   counter.textContent=`Questão ${current+1} de ${questions.length}`;
   points.textContent=`${score} ponto(s)`;
   progress.style.width=`${((current+1)/questions.length)*100}%`;
@@ -415,10 +440,10 @@ function render(){
   feedback.className="feedback";
   feedback.innerHTML="";
   next.className="next";
-  item.options.forEach((opt,i)=>{
+  displayedOptions.forEach((entry,i)=>{
     const button=document.createElement("button");
     button.className="option";
-    button.innerHTML=`<span class="letter">${String.fromCharCode(65+i)}</span><span>${opt[0]}</span>`;
+    button.innerHTML=`<span class="letter">${String.fromCharCode(65+i)}</span><span>${entry.opt[0]}</span>`;
     button.onclick=()=>answer(i);
     optionsEl.appendChild(button);
   });
@@ -427,20 +452,19 @@ function render(){
 function answer(selected){
   if(answered)return;
   answered=true;
-  const item=questions[current];
   const buttons=[...document.querySelectorAll(".option")];
   buttons.forEach(b=>b.disabled=true);
-  buttons[item.correct].classList.add("correct");
+  buttons[displayedCorrect].classList.add("correct");
 
-  if(selected===item.correct){
+  if(selected===displayedCorrect){
     score++;
     buttons[selected].classList.add("correct");
     feedback.className="feedback show ok";
-    feedback.innerHTML=`<strong>🎉 Parabéns! Você acertou!</strong>${item.options[selected][1]}`;
+    feedback.innerHTML=`<strong>🎉 Parabéns! Você acertou!</strong>${displayedOptions[selected].opt[1]}`;
   }else{
     buttons[selected].classList.add("wrong");
     feedback.className="feedback show no";
-    feedback.innerHTML=`<strong>❌ Não foi dessa vez!</strong>${item.options[selected][1]}<br><br><strong>Resposta correta:</strong> ${item.options[item.correct][0]}. ${item.options[item.correct][1]}`;
+    feedback.innerHTML=`<strong>❌ Não foi dessa vez!</strong>${displayedOptions[selected].opt[1]}<br><br><strong>Resposta correta:</strong> ${displayedOptions[displayedCorrect].opt[0]}. ${displayedOptions[displayedCorrect].opt[1]}`;
   }
   points.textContent=`${score} ponto(s)`;
   next.className="next show";
@@ -473,20 +497,65 @@ function showResult(){
     msg="📚 Você precisa rever os conceitos e as aulas. Não desanime! Estude novamente os conteúdos, pratique os exemplos e tente o quiz outra vez. Com prática, você pode melhorar bastante!";
   }
   document.getElementById("message").textContent=msg;
+  document.getElementById("studentResult").textContent=`Aluno(a): ${studentName} • Turma: ${studentClass}`;
+  saveResult(studentName, score, questions.length, pct);
 }
 
 function restart(){
   current=0;score=0;
   document.getElementById("result").className="result";
+  document.getElementById("quiz").style.display="none";
+  document.getElementById("startScreen").style.display="block";
+  document.getElementById("studentName").value=studentName;
+}
+
+function saveResult(name, score, total, percentage){
+  const result={
+    nome:name,
+    turma:studentClass,
+    pontuacao:score,
+    total:total,
+    aproveitamento:percentage,
+    data:new Date().toLocaleString("pt-BR")
+  };
+  const history=JSON.parse(localStorage.getItem("quizAlgoritmosResultados")||"[]");
+  history.push(result);
+  localStorage.setItem("quizAlgoritmosResultados",JSON.stringify(history));
+
+  // Para enviar os resultados para uma planilha Google, coloque aqui a URL
+  // publicada do Google Apps Script.
+  const GOOGLE_SHEETS_URL="https://script.google.com/macros/s/AKfycbzSRKMoOhzpXPC4IbXFoHA4d2PqD7LfKOIBs1imY5wK4BTMW1HYeVlIcpz11JnkyEvKNw/exec";
+  if(GOOGLE_SHEETS_URL){
+    fetch(GOOGLE_SHEETS_URL,{
+      method:"POST",
+      mode:"no-cors",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(result)
+    }).catch(()=>{});
+  }
+}
+
+document.getElementById("startButton").onclick=()=>{
+  const input=document.getElementById("studentName");
+  const error=document.getElementById("nameError");
+  const classInput=document.getElementById("studentClass");
+  studentName=input.value.trim();
+  studentClass=classInput.value.trim();
+  if(studentName.length<3 || studentClass.length<1){
+    error.style.display="block";
+    input.focus();
+    return;
+  }
+  error.style.display="none";
+  document.getElementById("startScreen").style.display="none";
   document.getElementById("quiz").style.display="block";
   render();
-}
+};
 
 function escapeHtml(text){
   return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-render();
 </script>
 </body>
 </html>
